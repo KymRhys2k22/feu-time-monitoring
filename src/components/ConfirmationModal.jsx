@@ -45,7 +45,7 @@ export default function ConfirmationModal({
           gsap.fromTo(
             container.current,
             { y: 50, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.3, ease: "power2.out" }
+            { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }
           );
         } else {
           // Animate Out: isOpen is false, but isRendered is still true (exit phase)
@@ -53,7 +53,7 @@ export default function ConfirmationModal({
             y: 50,
             opacity: 0,
             duration: 0.3,
-            ease: "power2.in",
+            ease: "power3.in",
           });
         }
       }

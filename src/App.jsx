@@ -7,6 +7,7 @@ import RecentActivity from "./components/RecentActivity";
 import ConfirmationModal from "./components/ConfirmationModal";
 import { format } from "date-fns";
 import { api } from "./services/api";
+import Quotes from "./components/Quotes";
 
 function App() {
   const [studentName, setStudentName] = useState(() => {
@@ -162,6 +163,8 @@ function App() {
         <div className="px-6 flex-1 overflow-y-auto pb-20">
           <Header theme={theme} toggleTheme={toggleTheme} />
           <Clock />
+          <Quotes />
+
           <AttendanceForm
             studentName={studentName}
             setStudentName={setStudentName}
