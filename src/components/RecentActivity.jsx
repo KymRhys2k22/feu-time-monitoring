@@ -3,7 +3,7 @@ import { format, parse } from "date-fns";
 import { LogIn, LogOut, Loader2, User } from "lucide-react";
 import { api } from "../services/api";
 
-export default function RecentActivity() {
+export default function RecentActivity({ studentNumber, section }) {
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -90,6 +90,21 @@ export default function RecentActivity() {
     fetchLogs();
   }, []);
 
+  // Filter activities based on props (persisted state)
+  const filteredActivities = activities.filter((log) => {
+    // If no student details are provided, show nothing or all?
+    // Requirement: "Display only the current student’s records"
+    if (!studentNumber || !section) return false;
+
+    // Strict string matching (trim to be safe)
+    const matchNumber =
+      log.studentNumber &&
+      String(log.studentNumber).trim() === String(studentNumber).trim();
+    const matchSection = log.section && log.section.trim() === section.trim();
+
+    return matchNumber && matchSection;
+  });
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -98,10 +113,14 @@ export default function RecentActivity() {
     );
   }
 
-  if (activities.length === 0) {
+  if (filteredActivities.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400">
-        <p>No recent activity</p>
+        <p>
+          {!studentNumber || !section
+            ? "Enter your details to view activity"
+            : "No records found for this student"}
+        </p>
       </div>
     );
   }
@@ -112,7 +131,7 @@ export default function RecentActivity() {
         Recent Activity
       </h4>
 
-      {activities.map((log) => (
+      {filteredActivities.map((log) => (
         <div
           key={log.id}
           className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-colors">
@@ -131,10 +150,10 @@ export default function RecentActivity() {
             </div>
 
             <div>
-              <p className="font-bold text-slate-900 dark:text-white capitalize">
+              <p className="font-bold  text-slate-900 dark:text-white capitalize">
                 {log.studentName}
               </p>
-              <div className="flex flex-col text-sm text-slate-500 dark:text-slate-400">
+              <div className="flex flex-col text-base text-slate-500 dark:text-slate-400">
                 {log.studentNumber && (
                   <span className="text-xs text-slate-400 font-mono mb-0.5">
                     #{log.studentNumber}
@@ -160,7 +179,7 @@ export default function RecentActivity() {
         </div>
       ))}
 
-      {activities.length > 5 && (
+      {filteredActivities.length > 5 && (
         <div className="text-center pt-2">
           <button className="text-primary text-sm font-medium hover:underline">
             View All

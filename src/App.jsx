@@ -175,7 +175,7 @@ function App() {
             onTimeOut={handleTimeOut}
             isLoading={isLoading}
           />
-          {/* <RecentActivity logs={logs} /> */}
+          <RecentActivity studentNumber={studentNumber} section={section} />
         </div>
       </div>
       <ConfirmationModal
