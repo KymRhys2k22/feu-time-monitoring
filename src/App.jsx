@@ -9,9 +9,24 @@ import { format } from "date-fns";
 import { api } from "./services/api";
 
 function App() {
-  const [studentName, setStudentName] = useState("");
-  const [section, setSection] = useState("");
-  const [studentNumber, setStudentNumber] = useState("");
+  const [studentName, setStudentName] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("form_studentName") || "";
+    }
+    return "";
+  });
+  const [section, setSection] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("form_section") || "";
+    }
+    return "";
+  });
+  const [studentNumber, setStudentNumber] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("form_studentNumber") || "";
+    }
+    return "";
+  });
   const [logs, setLogs] = useState(() => {
     const savedLogs = localStorage.getItem("attendanceLogs");
     if (savedLogs) {
@@ -51,6 +66,19 @@ function App() {
   useEffect(() => {
     localStorage.setItem("attendanceLogs", JSON.stringify(logs));
   }, [logs]);
+
+  // Persist form inputs
+  useEffect(() => {
+    localStorage.setItem("form_studentName", studentName);
+  }, [studentName]);
+
+  useEffect(() => {
+    localStorage.setItem("form_section", section);
+  }, [section]);
+
+  useEffect(() => {
+    localStorage.setItem("form_studentNumber", studentNumber);
+  }, [studentNumber]);
 
   const handleTimeIn = async () => {
     if (!studentName || !section || !studentNumber) {
