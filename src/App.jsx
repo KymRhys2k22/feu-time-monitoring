@@ -158,8 +158,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex justify-center transition-colors duration-300">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 min-h-screen shadow-xl overflow-hidden flex flex-col relative transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center transition-colors duration-300">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 min-h-screen  overflow-hidden flex flex-col relative transition-colors duration-300">
         <div className="px-6 flex-1 overflow-y-auto pb-20">
           <Header theme={theme} toggleTheme={toggleTheme} />
           <Clock />
