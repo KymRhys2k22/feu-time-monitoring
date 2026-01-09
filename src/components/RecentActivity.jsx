@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { LogIn, LogOut, Loader2, User } from "lucide-react";
 import { api } from "../services/api";
 
 export default function RecentActivity({ studentNumber, section }) {
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -105,6 +106,10 @@ export default function RecentActivity({ studentNumber, section }) {
     return matchNumber && matchSection;
   });
 
+  const displayedActivities = showAll
+    ? filteredActivities
+    : filteredActivities.slice(0, 3);
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -131,7 +136,7 @@ export default function RecentActivity({ studentNumber, section }) {
         Recent Activity
       </h4>
 
-      {filteredActivities.map((log) => (
+      {displayedActivities.map((log) => (
         <div
           key={log.id}
           className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-colors">
@@ -150,9 +155,17 @@ export default function RecentActivity({ studentNumber, section }) {
             </div>
 
             <div>
-              <p className="font-bold  text-slate-900 dark:text-white capitalize">
-                {log.studentName}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-bold  text-slate-900 dark:text-white capitalize">
+                  {log.studentName}
+                </p>
+                <div className="flex flex-col items-end">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300`}>
+                    {log.section || "N/A"}
+                  </span>
+                </div>
+              </div>
               <div className="flex flex-col text-base text-slate-500 dark:text-slate-400">
                 {log.studentNumber && (
                   <span className="text-xs text-slate-400 font-mono mb-0.5">
@@ -169,20 +182,15 @@ export default function RecentActivity({ studentNumber, section }) {
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col items-end">
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300`}>
-              {log.section || "N/A"}
-            </span>
-          </div>
         </div>
       ))}
 
-      {filteredActivities.length > 5 && (
+      {filteredActivities.length > 3 && (
         <div className="text-center pt-2">
-          <button className="text-primary text-sm font-medium hover:underline">
-            View All
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="text-primary text-sm font-medium hover:underline">
+            {showAll ? "View Less" : "View All"}
           </button>
         </div>
       )}

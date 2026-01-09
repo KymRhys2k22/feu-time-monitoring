@@ -7,9 +7,12 @@ export default function Header({ theme, toggleTheme }) {
       {/* <button className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
         <Menu className="w-6 h-6 text-slate-900 dark:text-white" />
       </button> */}
-      <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-        Work Immersion Log
-      </h1>
+      <div className="flex items-start space-x-2">
+        <img src="/vite.svg" className="w-6 h-6" alt="" />
+        <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+          Work Immersion Log
+        </h1>
+      </div>
       <div className="flex items-center space-x-1">
         <button
           onClick={toggleTheme}
