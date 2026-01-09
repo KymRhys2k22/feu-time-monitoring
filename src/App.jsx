@@ -11,6 +11,7 @@ import { api } from "./services/api";
 function App() {
   const [studentName, setStudentName] = useState("");
   const [section, setSection] = useState("");
+  const [studentNumber, setStudentNumber] = useState("");
   const [logs, setLogs] = useState(() => {
     const savedLogs = localStorage.getItem("attendanceLogs");
     if (savedLogs) {
@@ -52,8 +53,8 @@ function App() {
   }, [logs]);
 
   const handleTimeIn = async () => {
-    if (!studentName || !section) {
-      alert("Please enter your name and select a section.");
+    if (!studentName || !section || !studentNumber) {
+      alert("Please enter your name, student number, and select a section.");
       return;
     }
 
@@ -62,7 +63,7 @@ function App() {
     const now = new Date();
 
     try {
-      await api.timeIn(studentName, section, now);
+      await api.timeIn(studentName, section, studentNumber, now);
     } catch (error) {
       console.error("Failed to sync with Google Sheets", error);
       // Optional: Show error toast, but we proceed with local log
@@ -75,6 +76,7 @@ function App() {
       type: "TIME_IN",
       studentName,
       section,
+      studentNumber,
       timestamp: now.toISOString(),
       status: "On Time",
     };
@@ -90,8 +92,8 @@ function App() {
   };
 
   const handleTimeOut = async () => {
-    if (!studentName || !section) {
-      alert("Please enter your name and select a section.");
+    if (!studentName || !section || !studentNumber) {
+      alert("Please enter your name, student number, and select a section.");
       return;
     }
 
@@ -100,7 +102,7 @@ function App() {
     const now = new Date();
 
     try {
-      await api.timeOut(studentName, section, now);
+      await api.timeOut(studentName, section, studentNumber, now);
     } catch (error) {
       console.error("Failed to sync with Google Sheets", error);
     }
@@ -111,6 +113,7 @@ function App() {
       type: "TIME_OUT",
       studentName,
       section,
+      studentNumber,
       timestamp: now.toISOString(),
       status: "On Time",
     };
@@ -136,13 +139,15 @@ function App() {
             setStudentName={setStudentName}
             section={section}
             setSection={setSection}
+            studentNumber={studentNumber}
+            setStudentNumber={setStudentNumber}
           />
           <ActionButtons
             onTimeIn={handleTimeIn}
             onTimeOut={handleTimeOut}
             isLoading={isLoading}
           />
-          <RecentActivity logs={logs} />
+          {/* <RecentActivity logs={logs} /> */}
         </div>
       </div>
       <ConfirmationModal

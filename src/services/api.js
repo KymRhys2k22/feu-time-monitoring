@@ -1,15 +1,11 @@
 export const api = {
   // Replace this with your actual Web App URL after deployment
-  url: "https://script.google.com/macros/s/AKfycbwljxQETO1PBws1wTQO8iN83Ixke1R6kY_-NgtEK5HHuvU-SCC4psKVHgEDGVWgvo1AMw/exec",
+  url: "https://script.google.com/macros/s/AKfycbxZt3dYuGGVm494M13mmkEYfHOPoGeMmISlvi6uLhlWLJyjX4v66cCWVKNwWEuDzY4Atg/exec",
+  sheetUrl:
+    "https://opensheet.elk.sh/190FmQf7sRJovfSUjxX0oE_0Ye6OVtFkn_yWhMk4KoAA/Master",
 
-  timeIn: async (name, section, dateObj = new Date()) => {
-    if (
-      api.url ===
-      "https://script.google.com/macros/s/AKfycbwljxQETO1PBws1wTQO8iN83Ixke1R6kY_-NgtEK5HHuvU-SCC4psKVHgEDGVWgvo1AMw/exec"
-    ) {
-      console.warn("Google Script URL not configured");
-      return;
-    }
+  timeIn: async (name, section, studentNumber, dateObj = new Date()) => {
+    // Validation removed to allow actual URL
 
     const time = dateObj.toLocaleTimeString("en-US", {
       hour12: false,
@@ -22,6 +18,7 @@ export const api = {
       {
         NAME: name,
         SECTION: section,
+        "STUDENT NUMBER": studentNumber,
         IN: time,
         OUT: "",
         DATE: date,
@@ -44,14 +41,8 @@ export const api = {
     }
   },
 
-  timeOut: async (name, section, dateObj = new Date()) => {
-    if (
-      api.url ===
-      "https://script.google.com/macros/s/AKfycbwljxQETO1PBws1wTQO8iN83Ixke1R6kY_-NgtEK5HHuvU-SCC4psKVHgEDGVWgvo1AMw/exec"
-    ) {
-      console.warn("Google Script URL not configured");
-      return;
-    }
+  timeOut: async (name, section, studentNumber, dateObj = new Date()) => {
+    // Validation removed to allow actual URL
 
     const time = dateObj.toLocaleTimeString("en-US", {
       hour12: false,
@@ -64,6 +55,7 @@ export const api = {
       {
         NAME: name,
         SECTION: section,
+        "STUDENT NUMBER": studentNumber,
         IN: "",
         OUT: time,
         DATE: date,
@@ -83,6 +75,19 @@ export const api = {
     } catch (error) {
       console.error("API Error:", error);
       throw error;
+    }
+  },
+
+  getLogs: async () => {
+    try {
+      const response = await fetch(api.sheetUrl);
+      if (!response.ok) {
+        throw new Error("Failed to fetch logs");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("API Error (getLogs):", error);
+      return [];
     }
   },
 };
