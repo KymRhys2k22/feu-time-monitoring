@@ -9,6 +9,10 @@ import { format } from "date-fns";
 import { api } from "./services/api";
 import Quotes from "./components/Quotes";
 
+import { useAttendanceLogs } from "./hooks/useAttendanceLogs";
+import FAB from "./components/FAB";
+import ModalCalculator from "./components/ModalCalculator";
+
 function App() {
   const [studentName, setStudentName] = useState(() => {
     if (typeof window !== "undefined") {
@@ -28,26 +32,28 @@ function App() {
     }
     return "";
   });
-  const [logs, setLogs] = useState(() => {
-    const savedLogs = localStorage.getItem("attendanceLogs");
-    if (savedLogs) {
-      try {
-        return JSON.parse(savedLogs);
-      } catch (e) {
-        console.error("Failed to parse logs", e);
-      }
-    }
-    return [];
-  });
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Use the custom hook for logs and polling
+  const {
+    logs,
+    isLoading: isLogsLoading,
+    fetchLogs,
+    triggerPolling,
+  } = useAttendanceLogs();
+
+  // Local loading state for submission actions
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({ message: "", subMessage: "" });
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") || "light";
     }
     return "light";
   });
+
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -63,10 +69,10 @@ function App() {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
 
-  // Save logs to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem("attendanceLogs", JSON.stringify(logs));
-  }, [logs]);
+    // Initial fetch of logs
+    fetchLogs();
+  }, [fetchLogs]);
 
   // Persist form inputs
   useEffect(() => {
@@ -81,80 +87,74 @@ function App() {
     localStorage.setItem("form_studentNumber", studentNumber);
   }, [studentNumber]);
 
+  const validateForm = () => {
+    const newErrors = {};
+    if (!studentName.trim()) newErrors.studentName = true;
+    if (!section) newErrors.section = true;
+    if (!studentNumber.trim()) newErrors.studentNumber = true;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const clearError = (field) => {
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: false }));
+    }
+  };
+
   const handleTimeIn = async () => {
-    if (!studentName || !section || !studentNumber) {
-      alert("Please enter your name, student number, and select a section.");
+    if (!validateForm()) {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     const now = new Date();
 
     try {
       await api.timeIn(studentName, section, studentNumber, now);
+      // Trigger polling after action
+      triggerPolling();
     } catch (error) {
       console.error("Failed to sync with Google Sheets", error);
-      // Optional: Show error toast, but we proceed with local log
     }
 
-    // Proceed with local update regardless of API success (optimistic UI)
-    // setTimeout(() => {
-    const newLog = {
-      id: now.getTime(),
-      type: "TIME_IN",
-      studentName,
-      section,
-      studentNumber,
-      timestamp: now.toISOString(),
-      status: "On Time",
-    };
+    // Optimistic update if needed or just wait for polling?
+    // The requirement says "After the form is successfully submitted... If the new data is identical... continue refreshing"
+    // So we rely on polling for the list update.
 
-    setLogs((prev) => [newLog, ...prev]);
     setModalData({
       message: "Action Confirmed",
       subMessage: `Timed IN successfully at ${format(now, "hh:mm a")}`,
     });
     setModalOpen(true);
-    setIsLoading(false);
-    // }, 800);
+    setIsSubmitting(false);
   };
 
   const handleTimeOut = async () => {
-    if (!studentName || !section || !studentNumber) {
-      alert("Please enter your name, student number, and select a section.");
+    if (!validateForm()) {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     const now = new Date();
 
     try {
       await api.timeOut(studentName, section, studentNumber, now);
+      // Trigger polling after action
+      triggerPolling();
     } catch (error) {
       console.error("Failed to sync with Google Sheets", error);
     }
 
-    // setTimeout(() => {
-    const newLog = {
-      id: now.getTime(),
-      type: "TIME_OUT",
-      studentName,
-      section,
-      studentNumber,
-      timestamp: now.toISOString(),
-      status: "On Time",
-    };
-
-    setLogs((prev) => [newLog, ...prev]);
     setModalData({
       message: "Action Confirmed",
       subMessage: `Timed OUT successfully at ${format(now, "hh:mm a")}`,
     });
     setModalOpen(true);
-    setIsLoading(false);
-    // }, 800);
+    setIsSubmitting(false);
   };
 
   return (
@@ -172,20 +172,35 @@ function App() {
             setSection={setSection}
             studentNumber={studentNumber}
             setStudentNumber={setStudentNumber}
+            errors={errors}
+            clearError={clearError}
           />
           <ActionButtons
             onTimeIn={handleTimeIn}
             onTimeOut={handleTimeOut}
-            isLoading={isLoading}
+            isLoading={isSubmitting}
           />
-          <RecentActivity studentNumber={studentNumber} section={section} />
+          <RecentActivity
+            studentNumber={studentNumber}
+            section={section}
+            logs={logs}
+            isLoading={isLogsLoading}
+          />
         </div>
+
+        {/* Floating Action Button */}
+        <FAB onClick={() => setIsCalculatorOpen(true)} />
       </div>
       <ConfirmationModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         message={modalData.message}
         subMessage={modalData.subMessage}
+      />
+
+      <ModalCalculator
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
       />
     </div>
   );

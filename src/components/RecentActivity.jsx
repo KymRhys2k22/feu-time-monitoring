@@ -1,95 +1,83 @@
 import React, { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { LogIn, LogOut, Loader2, User } from "lucide-react";
-import { api } from "../services/api";
 
-export default function RecentActivity({ studentNumber, section }) {
+export default function RecentActivity({
+  studentNumber,
+  section,
+  logs = [],
+  isLoading = false,
+}) {
   const [activities, setActivities] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      setIsLoading(true);
-      try {
-        const data = await api.getLogs();
-        const parsedEvents = [];
+    // Process logs whenever props change
+    const processLogs = () => {
+      const parsedEvents = [];
 
-        data.forEach((row, index) => {
-          // Row format: { NAME, SECTION, IN, OUT, DATE }
-          // DATE example: "12-12-2026"
-          // IN/OUT example: "12:00" or "1:23"
+      logs.forEach((row, index) => {
+        // Row format: { NAME, SECTION, IN, OUT, DATE }
+        // DATE example: "12-12-2026"
+        // IN/OUT example: "12:00" or "1:23"
 
-          if (!row.DATE) return;
+        if (!row.DATE) return;
 
-          const dateStr = row.DATE; // MM-DD-YYYY
+        const dateStr = row.DATE; // MM-DD-YYYY
 
-          // Helper to combine date and time string into a Date object
-          const parseDateTime = (timeStr) => {
-            if (!timeStr) return null;
-            try {
-              // Parse "MM-DD-YYYY HH:mm" or similar
-              // Adjusting for potential slight variations if needed, but assuming strictness for now
-              // Assuming time is in 24h or 12h? The example "1:23" suggests 12h without AM/PM or 24h.
-              // Let's safe-guard. If input is "1:23", is it 1:23 AM or 13:23?
-              // The example input "12:00" -> "1:23" suggests sequential.
-              // Standard inputs usually vary. Let's try flexible parsing or combining strings.
-              const dateTimeStr = `${dateStr} ${timeStr}`;
-              // Try parsing with known format.
-              // If "1:23" is 1:23 AM.
-              // Using native date parsing might be easier for "MM-DD-YYYY HH:mm"
-              return new Date(dateTimeStr);
-            } catch (e) {
-              console.error("Date parse error", e);
-              return null;
-            }
-          };
-
-          // Process TIME IN
-          if (row.IN) {
-            const timeInDate = parseDateTime(row.IN);
-            if (timeInDate && !isNaN(timeInDate)) {
-              parsedEvents.push({
-                id: `in-${index}`,
-                type: "TIME_IN",
-                studentName: row.NAME,
-                section: row.SECTION,
-                studentNumber: row["STUDENT NUMBER"],
-                timestamp: timeInDate,
-                status: "Recorded", // Default status, we don't have enough logic for 'Late' without schedule
-              });
-            }
+        // Helper to combine date and time string into a Date object
+        const parseDateTime = (timeStr) => {
+          if (!timeStr) return null;
+          try {
+            // Parse "MM-DD-YYYY HH:mm" or similar
+            const dateTimeStr = `${dateStr} ${timeStr}`;
+            return new Date(dateTimeStr);
+          } catch (e) {
+            console.error("Date parse error", e);
+            return null;
           }
+        };
 
-          // Process TIME OUT
-          if (row.OUT) {
-            const timeOutDate = parseDateTime(row.OUT);
-            if (timeOutDate && !isNaN(timeOutDate)) {
-              parsedEvents.push({
-                id: `out-${index}`,
-                type: "TIME_OUT",
-                studentName: row.NAME,
-                section: row.SECTION,
-                studentNumber: row["STUDENT NUMBER"],
-                timestamp: timeOutDate,
-                status: "Recorded",
-              });
-            }
+        // Process TIME IN
+        if (row.IN) {
+          const timeInDate = parseDateTime(row.IN);
+          if (timeInDate && !isNaN(timeInDate)) {
+            parsedEvents.push({
+              id: `in-${index}`,
+              type: "TIME_IN",
+              studentName: row.NAME,
+              section: row.SECTION,
+              studentNumber: row["STUDENT NUMBER"],
+              timestamp: timeInDate,
+              status: "Recorded",
+            });
           }
-        });
+        }
 
-        // Sort by timestamp descending (newest first)
-        parsedEvents.sort((a, b) => b.timestamp - a.timestamp);
-        setActivities(parsedEvents);
-      } catch (error) {
-        console.error("Failed to fetch logs", error);
-      } finally {
-        setIsLoading(false);
-      }
+        // Process TIME OUT
+        if (row.OUT) {
+          const timeOutDate = parseDateTime(row.OUT);
+          if (timeOutDate && !isNaN(timeOutDate)) {
+            parsedEvents.push({
+              id: `out-${index}`,
+              type: "TIME_OUT",
+              studentName: row.NAME,
+              section: row.SECTION,
+              studentNumber: row["STUDENT NUMBER"],
+              timestamp: timeOutDate,
+              status: "Recorded",
+            });
+          }
+        }
+      });
+
+      // Sort by timestamp descending (newest first)
+      parsedEvents.sort((a, b) => b.timestamp - a.timestamp);
+      setActivities(parsedEvents);
     };
 
-    fetchLogs();
-  }, []);
+    processLogs();
+  }, [logs]);
 
   // Filter activities based on props (persisted state)
   const filteredActivities = activities.filter((log) => {
