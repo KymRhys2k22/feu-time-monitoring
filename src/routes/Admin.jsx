@@ -80,7 +80,7 @@ export default function Admin() {
       let queryBuilder = supabase
         .from("student")
         .select("*")
-        .order("date", { ascending: false });
+        .order("id", { ascending: false });
 
       if (query) {
         queryBuilder = queryBuilder.or(
