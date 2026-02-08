@@ -6,7 +6,7 @@ import ActionButtons from "./components/ActionButtons";
 import RecentActivity from "./components/RecentActivity";
 import ConfirmationModal from "./components/ConfirmationModal";
 import { format } from "date-fns";
-import { api } from "./services/api";
+import { supabase } from "./services/supabaseClient";
 import Quotes from "./components/Quotes";
 
 import { useAttendanceLogs } from "./hooks/useAttendanceLogs";
@@ -113,11 +113,30 @@ function App() {
     const now = new Date();
 
     try {
-      await api.timeIn(studentName, section, studentNumber, now);
-      // Trigger polling after action
-      triggerPolling();
+      // await api.timeIn(studentName, section, studentNumber, now);
+      const timeString = format(now, "HH:mm");
+      const dateString = format(now, "MM-dd-yyyy");
+
+      const { error } = await supabase.from("student").insert([
+        {
+          name: studentName,
+          section: section,
+          date: dateString,
+          in: timeString,
+          out: "",
+          student_number: studentNumber,
+        },
+      ]);
+
+      if (error) throw error;
+
+      // Trigger polling after action (though RecentActivity now handles fetch internally?)
+      // We might need to refresh RecentActivity. For now, RecentActivity fetches on mount.
+      // Ideally we should signal RecentActivity to refresh.
+      // But let's first get the insert working.
+      triggerPolling(); // This might trigger the old hook, but harmless.
     } catch (error) {
-      console.error("Failed to sync with Google Sheets", error);
+      console.error("Failed to sync with Supabase", error);
     }
 
     // Optimistic update if needed or just wait for polling?
@@ -142,11 +161,26 @@ function App() {
     const now = new Date();
 
     try {
-      await api.timeOut(studentName, section, studentNumber, now);
-      // Trigger polling after action
+      // await api.timeOut(studentName, section, studentNumber, now);
+      const timeString = format(now, "HH:mm");
+      const dateString = format(now, "MM-dd-yyyy");
+
+      const { error } = await supabase.from("student").insert([
+        {
+          name: studentName,
+          section: section,
+          date: dateString,
+          in: "",
+          out: timeString,
+          student_number: studentNumber,
+        },
+      ]);
+
+      if (error) throw error;
+
       triggerPolling();
     } catch (error) {
-      console.error("Failed to sync with Google Sheets", error);
+      console.error("Failed to sync with Supabase", error);
     }
 
     setModalData({

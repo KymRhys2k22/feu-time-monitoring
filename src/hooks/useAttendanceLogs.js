@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
-import { api } from "../services/api";
+// import { api } from "../services/api";
+import { supabase } from "../services/supabaseClient";
 
 export const useAttendanceLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -10,7 +11,9 @@ export const useAttendanceLogs = () => {
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.getLogs();
+      // const data = await api.getLogs();
+      const { data, error } = await supabase.from("student").select("*");
+      if (error) throw error;
       setLogs(data);
     } catch (error) {
       console.error("Failed to fetch logs", error);
@@ -70,7 +73,11 @@ export const useAttendanceLogs = () => {
       // Let's do a fetch.
       let currentDataStr = "";
       try {
-        const initial = await api.getLogs();
+        // const initial = await api.getLogs();
+        const { data: initial, error } = await supabase
+          .from("student")
+          .select("*");
+        if (error) throw error;
         currentDataStr = JSON.stringify(initial);
         // We might want to update the UI with this initial fetch too, just in case.
         setLogs(initial);
@@ -87,7 +94,11 @@ export const useAttendanceLogs = () => {
         }
 
         try {
-          const newData = await api.getLogs();
+          // const newData = await api.getLogs();
+          const { data: newData, error } = await supabase
+            .from("student")
+            .select("*");
+          if (error) throw error;
           const newDataStr = JSON.stringify(newData);
 
           if (newDataStr !== currentDataStr) {

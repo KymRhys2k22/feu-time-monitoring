@@ -5,25 +5,28 @@ import { LogIn, LogOut, Loader2, User } from "lucide-react";
 export default function RecentActivity({
   studentNumber,
   section,
-  logs = [],
+  logs = [], // Receive logs from parent
   isLoading = false,
 }) {
   const [activities, setActivities] = useState([]);
   const [showAll, setShowAll] = useState(false);
+  // const [studentLogs, setStudentLogs] = useState([]); // No longer needed as we use props
 
+  // Effect to process logs when they change
   useEffect(() => {
     // Process logs whenever props change
     const processLogs = () => {
       const parsedEvents = [];
 
+      // Use logs prop instead of internal state
       logs.forEach((row, index) => {
         // Row format: { NAME, SECTION, IN, OUT, DATE }
         // DATE example: "12-12-2026"
         // IN/OUT example: "12:00" or "1:23"
 
-        if (!row.DATE) return;
+        if (!row.date) return;
 
-        const dateStr = row.DATE; // MM-DD-YYYY
+        const dateStr = row.date; // MM-DD-YYYY
 
         // Helper to combine date and time string into a Date object
         const parseDateTime = (timeStr) => {
@@ -39,15 +42,15 @@ export default function RecentActivity({
         };
 
         // Process TIME IN
-        if (row.IN) {
-          const timeInDate = parseDateTime(row.IN);
+        if (row.in) {
+          const timeInDate = parseDateTime(row.in);
           if (timeInDate && !isNaN(timeInDate)) {
             parsedEvents.push({
               id: `in-${index}`,
               type: "TIME_IN",
-              studentName: row.NAME,
-              section: row.SECTION,
-              studentNumber: row["STUDENT NUMBER"],
+              studentName: row.name,
+              section: row.section,
+              studentNumber: row.student_number,
               timestamp: timeInDate,
               status: "Recorded",
             });
@@ -55,15 +58,15 @@ export default function RecentActivity({
         }
 
         // Process TIME OUT
-        if (row.OUT) {
-          const timeOutDate = parseDateTime(row.OUT);
+        if (row.out) {
+          const timeOutDate = parseDateTime(row.out);
           if (timeOutDate && !isNaN(timeOutDate)) {
             parsedEvents.push({
               id: `out-${index}`,
               type: "TIME_OUT",
-              studentName: row.NAME,
-              section: row.SECTION,
-              studentNumber: row["STUDENT NUMBER"],
+              studentName: row.name,
+              section: row.section,
+              studentNumber: row.student_number,
               timestamp: timeOutDate,
               status: "Recorded",
             });
