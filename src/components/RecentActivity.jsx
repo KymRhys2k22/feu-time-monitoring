@@ -1,47 +1,57 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
-import { LogIn, LogOut, Loader2, User } from "lucide-react";
+import { LogIn, LogOut, Loader2 } from "lucide-react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 export default function RecentActivity({
   studentNumber,
   section,
-  logs = [], // Receive logs from parent
+  logs = [],
   isLoading = false,
 }) {
   const [activities, setActivities] = useState([]);
   const [showAll, setShowAll] = useState(false);
-  // const [studentLogs, setStudentLogs] = useState([]); // No longer needed as we use props
+  const containerRef = useRef(null);
+  const headerRef = useRef(null);
+  const prevLengthRef = useRef(0);
 
   // Effect to process logs when they change
   useEffect(() => {
-    // Process logs whenever props change
     const processLogs = () => {
       const parsedEvents = [];
 
-      // Use logs prop instead of internal state
       logs.forEach((row, index) => {
-        // Row format: { NAME, SECTION, IN, OUT, DATE }
-        // DATE example: "12-12-2026"
-        // IN/OUT example: "12:00" or "1:23"
-
         if (!row.date) return;
 
-        const dateStr = row.date; // MM-DD-YYYY
+        const dateStr = row.date; // MM-DD-YYYY (e.g. "03-05-2026")
 
-        // Helper to combine date and time string into a Date object
+        // NOTE: new Date("MM-DD-YYYY HH:mm") is non-standard and returns NaN in
+        // many browsers. We must parse the parts manually.
         const parseDateTime = (timeStr) => {
           if (!timeStr) return null;
           try {
-            // Parse "MM-DD-YYYY HH:mm" or similar
-            const dateTimeStr = `${dateStr} ${timeStr}`;
-            return new Date(dateTimeStr);
+            const dateParts = dateStr.split("-");
+            if (dateParts.length !== 3) return null;
+            const month = parseInt(dateParts[0], 10);
+            const day = parseInt(dateParts[1], 10);
+            const year = parseInt(dateParts[2], 10);
+
+            const timeParts = String(timeStr).split(":");
+            if (timeParts.length < 2) return null;
+            const hours = parseInt(timeParts[0], 10);
+            const minutes = parseInt(timeParts[1], 10);
+
+            const date = new Date(year, month - 1, day, hours, minutes, 0, 0);
+            return isNaN(date.getTime()) ? null : date;
           } catch (e) {
             console.error("Date parse error", e);
             return null;
           }
         };
 
-        // Process TIME IN
         if (row.in) {
           const timeInDate = parseDateTime(row.in);
           if (timeInDate && !isNaN(timeInDate)) {
@@ -57,7 +67,6 @@ export default function RecentActivity({
           }
         }
 
-        // Process TIME OUT
         if (row.out) {
           const timeOutDate = parseDateTime(row.out);
           if (timeOutDate && !isNaN(timeOutDate)) {
@@ -74,7 +83,6 @@ export default function RecentActivity({
         }
       });
 
-      // Sort by timestamp descending (newest first)
       parsedEvents.sort((a, b) => b.timestamp - a.timestamp);
       setActivities(parsedEvents);
     };
@@ -82,18 +90,53 @@ export default function RecentActivity({
     processLogs();
   }, [logs]);
 
-  // Filter activities based on props (persisted state)
-  const filteredActivities = activities.filter((log) => {
-    // If no student details are provided, show nothing or all?
-    // Requirement: "Display only the current student’s records"
-    if (!studentNumber || !section) return false;
+  // Animate header when it mounts
+  useGSAP(
+    () => {
+      if (headerRef.current) {
+        gsap.from(headerRef.current, {
+          y: -10,
+          opacity: 0,
+          duration: 0.5,
+          ease: "power2.out",
+        });
+      }
+    },
+    { scope: containerRef },
+  );
 
-    // Strict string matching (trim to be safe)
+  // Animate activity cards whenever the displayed list changes
+  useGSAP(
+    () => {
+      const cards = containerRef.current?.querySelectorAll(".activity-card");
+      if (!cards || cards.length === 0) return;
+
+      const currentLength = cards.length;
+      const prevLength = prevLengthRef.current;
+
+      if (currentLength > prevLength) {
+        // Animate only newly-added cards (stagger from the top)
+        gsap.from(cards, {
+          y: 20,
+          opacity: 0,
+          duration: 0.4,
+          stagger: 0.08,
+          ease: "power3.out",
+        });
+      }
+
+      prevLengthRef.current = currentLength;
+    },
+    { scope: containerRef, dependencies: [activities, showAll] },
+  );
+
+  // Filter activities
+  const filteredActivities = activities.filter((log) => {
+    if (!studentNumber || !section) return false;
     const matchNumber =
       log.studentNumber &&
       String(log.studentNumber).trim() === String(studentNumber).trim();
     const matchSection = log.section && log.section.trim() === section.trim();
-
     return matchNumber && matchSection;
   });
 
@@ -122,15 +165,17 @@ export default function RecentActivity({
   }
 
   return (
-    <div className="space-y-4">
-      <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-2">
+    <div ref={containerRef} className="space-y-4">
+      <h4
+        ref={headerRef}
+        className="text-sm font-bold text-slate-900 dark:text-white mb-2">
         Recent Activity
       </h4>
 
       {displayedActivities.map((log) => (
         <div
           key={log.id}
-          className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-colors">
+          className="activity-card bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-colors">
           <div className="flex items-center space-x-4">
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center ${
@@ -147,12 +192,11 @@ export default function RecentActivity({
 
             <div>
               <div className="flex items-center gap-2">
-                <p className="font-bold  text-slate-900 dark:text-white capitalize">
+                <p className="font-bold text-slate-900 dark:text-white capitalize">
                   {log.studentName}
                 </p>
                 <div className="flex flex-col items-end">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300`}>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     {log.section || "N/A"}
                   </span>
                 </div>

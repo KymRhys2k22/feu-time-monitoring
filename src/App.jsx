@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Header from "./components/Header";
 import Clock from "./components/Clock";
 import AttendanceForm from "./components/AttendanceForm";
@@ -8,10 +8,14 @@ import ConfirmationModal from "./components/ConfirmationModal";
 import { format } from "date-fns";
 import { supabase } from "./services/supabaseClient";
 import Quotes from "./components/Quotes";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 
 import { useAttendanceLogs } from "./hooks/useAttendanceLogs";
 import FAB from "./components/FAB";
 import ModalCalculator from "./components/ModalCalculator";
+
+gsap.registerPlugin(useGSAP);
 
 function App() {
   const [studentName, setStudentName] = useState(() => {
@@ -55,6 +59,16 @@ function App() {
 
   const [errors, setErrors] = useState({});
 
+  // Refs for GSAP animation targets
+  const appRef = useRef(null);
+  const headerRef = useRef(null);
+  const clockRef = useRef(null);
+  const quotesRef = useRef(null);
+  const formRef = useRef(null);
+  const buttonsRef = useRef(null);
+  const activityRef = useRef(null);
+  const fabRef = useRef(null);
+
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === "dark") {
@@ -70,7 +84,6 @@ function App() {
   };
 
   useEffect(() => {
-    // Initial fetch of logs
     fetchLogs();
   }, [fetchLogs]);
 
@@ -86,6 +99,33 @@ function App() {
   useEffect(() => {
     localStorage.setItem("form_studentNumber", studentNumber);
   }, [studentNumber]);
+
+  // Page entrance animation — staggered cascade on mount
+  useGSAP(
+    () => {
+      const sections = [
+        headerRef.current,
+        clockRef.current,
+        quotesRef.current,
+        formRef.current,
+        buttonsRef.current,
+        activityRef.current,
+      ].filter(Boolean);
+
+      gsap.set(sections, { opacity: 0, y: 24 });
+
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+      // Stagger each section in sequentially
+      tl.to(sections, {
+        opacity: 1,
+        y: 0,
+        duration: 0.5,
+        stagger: 0.12,
+      });
+    },
+    { scope: appRef },
+  );
 
   const validateForm = () => {
     const newErrors = {};
@@ -113,7 +153,6 @@ function App() {
     const now = new Date();
 
     try {
-      // await api.timeIn(studentName, section, studentNumber, now);
       const timeString = format(now, "HH:mm");
       const dateString = format(now, "MM-dd-yyyy");
 
@@ -130,18 +169,10 @@ function App() {
 
       if (error) throw error;
 
-      // Trigger polling after action (though RecentActivity now handles fetch internally?)
-      // We might need to refresh RecentActivity. For now, RecentActivity fetches on mount.
-      // Ideally we should signal RecentActivity to refresh.
-      // But let's first get the insert working.
-      triggerPolling(); // This might trigger the old hook, but harmless.
+      triggerPolling();
     } catch (error) {
       console.error("Failed to sync with Supabase", error);
     }
-
-    // Optimistic update if needed or just wait for polling?
-    // The requirement says "After the form is successfully submitted... If the new data is identical... continue refreshing"
-    // So we rely on polling for the list update.
 
     setModalData({
       message: "Action Confirmed",
@@ -161,7 +192,6 @@ function App() {
     const now = new Date();
 
     try {
-      // await api.timeOut(studentName, section, studentNumber, now);
       const timeString = format(now, "HH:mm");
       const dateString = format(now, "MM-dd-yyyy");
 
@@ -192,39 +222,61 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center transition-colors duration-300">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 min-h-screen  overflow-hidden flex flex-col relative transition-colors duration-300">
+    <div
+      ref={appRef}
+      className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center transition-colors duration-300">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 min-h-screen overflow-hidden flex flex-col relative transition-colors duration-300">
         <div className="px-6 flex-1 overflow-y-auto pb-20">
-          <Header theme={theme} toggleTheme={toggleTheme} />
-          <Clock />
-          <Quotes />
+          {/* Each wrapper div is the ref target for GSAP */}
+          <div ref={headerRef}>
+            <Header theme={theme} toggleTheme={toggleTheme} />
+          </div>
 
-          <AttendanceForm
-            studentName={studentName}
-            setStudentName={setStudentName}
-            section={section}
-            setSection={setSection}
-            studentNumber={studentNumber}
-            setStudentNumber={setStudentNumber}
-            errors={errors}
-            clearError={clearError}
-          />
-          <ActionButtons
-            onTimeIn={handleTimeIn}
-            onTimeOut={handleTimeOut}
-            isLoading={isSubmitting}
-          />
-          <RecentActivity
-            studentNumber={studentNumber}
-            section={section}
-            logs={logs}
-            isLoading={isLogsLoading}
-          />
+          <div ref={clockRef}>
+            <Clock />
+          </div>
+
+          <div ref={quotesRef}>
+            <Quotes />
+          </div>
+
+          <div ref={formRef}>
+            <AttendanceForm
+              studentName={studentName}
+              setStudentName={setStudentName}
+              section={section}
+              setSection={setSection}
+              studentNumber={studentNumber}
+              setStudentNumber={setStudentNumber}
+              errors={errors}
+              clearError={clearError}
+            />
+          </div>
+
+          <div ref={buttonsRef}>
+            <ActionButtons
+              onTimeIn={handleTimeIn}
+              onTimeOut={handleTimeOut}
+              isLoading={isSubmitting}
+            />
+          </div>
+
+          <div ref={activityRef}>
+            <RecentActivity
+              studentNumber={studentNumber}
+              section={section}
+              logs={logs}
+              isLoading={isLogsLoading}
+            />
+          </div>
         </div>
+      </div>
 
-        {/* Floating Action Button */}
+      {/* Floating Action Button — outside overflow-hidden container so fixed positioning works viewport-relative */}
+      <div ref={fabRef}>
         <FAB onClick={() => setIsCalculatorOpen(true)} />
       </div>
+
       <ConfirmationModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

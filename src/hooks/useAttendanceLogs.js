@@ -12,7 +12,10 @@ export const useAttendanceLogs = () => {
     setIsLoading(true);
     try {
       // const data = await api.getLogs();
-      const { data, error } = await supabase.from("student").select("*");
+      const { data, error } = await supabase
+        .from("student")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       setLogs(data);
     } catch (error) {
@@ -76,7 +79,8 @@ export const useAttendanceLogs = () => {
         // const initial = await api.getLogs();
         const { data: initial, error } = await supabase
           .from("student")
-          .select("*");
+          .select("*")
+          .order("created_at", { ascending: false });
         if (error) throw error;
         currentDataStr = JSON.stringify(initial);
         // We might want to update the UI with this initial fetch too, just in case.
@@ -97,7 +101,8 @@ export const useAttendanceLogs = () => {
           // const newData = await api.getLogs();
           const { data: newData, error } = await supabase
             .from("student")
-            .select("*");
+            .select("*")
+            .order("created_at", { ascending: false });
           if (error) throw error;
           const newDataStr = JSON.stringify(newData);
 
