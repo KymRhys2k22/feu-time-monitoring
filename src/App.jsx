@@ -224,50 +224,57 @@ function App() {
   return (
     <div
       ref={appRef}
-      className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center transition-colors duration-300">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 min-h-screen overflow-hidden flex flex-col relative transition-colors duration-300">
-        <div className="px-6 flex-1 overflow-y-auto pb-20">
-          {/* Each wrapper div is the ref target for GSAP */}
+      className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center transition-colors duration-300 lg:p-8">
+      <div className="w-full max-w-md lg:max-w-6xl bg-white dark:bg-slate-900 min-h-[calc(100vh-2rem)] lg:min-h-0 lg:h-fit lg:rounded-3xl overflow-hidden flex flex-col relative transition-colors duration-300 shadow-xl border border-slate-100 dark:border-slate-800">
+        <div className="px-4 lg:px-6 flex-1 overflow-y-auto lg:overflow-visible pb-20 lg:pb-12">
           <div ref={headerRef}>
             <Header theme={theme} toggleTheme={toggleTheme} />
           </div>
 
-          <div ref={clockRef}>
-            <Clock />
-          </div>
+          <div className="lg:grid lg:grid-cols-2 lg:gap-12 items-start">
+            {/* Left Column: Form & Actions (Sticky on Desktop) */}
+            <div className="lg:sticky lg:top-8 space-y-6 lg:space-y-8">
+              <div ref={clockRef}>
+                <Clock />
+              </div>
 
-          <div ref={quotesRef}>
-            <Quotes />
-          </div>
+              <div ref={quotesRef}>
+                <Quotes />
+              </div>
 
-          <div ref={formRef}>
-            <AttendanceForm
-              studentName={studentName}
-              setStudentName={setStudentName}
-              section={section}
-              setSection={setSection}
-              studentNumber={studentNumber}
-              setStudentNumber={setStudentNumber}
-              errors={errors}
-              clearError={clearError}
-            />
-          </div>
+              <div ref={formRef}>
+                <AttendanceForm
+                  studentName={studentName}
+                  setStudentName={setStudentName}
+                  section={section}
+                  setSection={setSection}
+                  studentNumber={studentNumber}
+                  setStudentNumber={setStudentNumber}
+                  errors={errors}
+                  clearError={clearError}
+                />
+              </div>
 
-          <div ref={buttonsRef}>
-            <ActionButtons
-              onTimeIn={handleTimeIn}
-              onTimeOut={handleTimeOut}
-              isLoading={isSubmitting}
-            />
-          </div>
+              <div ref={buttonsRef}>
+                <ActionButtons
+                  onTimeIn={handleTimeIn}
+                  onTimeOut={handleTimeOut}
+                  isLoading={isSubmitting}
+                />
+              </div>
+            </div>
 
-          <div ref={activityRef}>
-            <RecentActivity
-              studentNumber={studentNumber}
-              section={section}
-              logs={logs}
-              isLoading={isLogsLoading}
-            />
+            {/* Right Column: Activity Monitoring */}
+            <div className="mt-8 lg:mt-0 lg:pt-4">
+              <div ref={activityRef}>
+                <RecentActivity
+                  studentNumber={studentNumber}
+                  section={section}
+                  logs={logs}
+                  isLoading={isLogsLoading}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
