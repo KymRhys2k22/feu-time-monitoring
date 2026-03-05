@@ -12,8 +12,14 @@ import {
   Sun,
   Lock,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "../services/supabaseClient";
+import { TRACKS } from "../constants";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import Tree from "react-d3-tree";
+import { format } from "date-fns";
 
 export default function Admin() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -98,6 +104,126 @@ export default function Admin() {
       setIsLoading(false);
     }
   };
+
+  const handleDownloadExcel = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("student")
+        .select("*")
+        .order("id", { ascending: false });
+
+      if (error) throw error;
+
+      // Prepare data for Excel
+      const excelData = data.map((item) => ({
+        "Student Name": item.name,
+        "Student Number": item.student_number,
+        Section: item.section,
+        Date: item.date,
+        "Time In": item.in,
+        "Time Out": item.out,
+      }));
+
+      // Create Worksheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Customize column widths
+      const wscols = [
+        { wch: 25 }, // Name
+        { wch: 15 }, // ID
+        { wch: 15 }, // Section
+        { wch: 15 }, // Date
+        { wch: 10 }, // In
+        { wch: 10 }, // Out
+      ];
+      worksheet["!cols"] = wscols;
+
+      // Create Workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+
+      // Generate Buffer
+      const excelBuffer = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array",
+      });
+
+      // Save file
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      });
+      saveAs(
+        blob,
+        `Attendance_Records_${new Date().toLocaleDateString()}.xlsx`,
+      );
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      alert("Failed to export data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this record?")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("student").delete().eq("id", id);
+      if (error) throw error;
+
+      // Refresh the list
+      fetchStudents(searchQuery);
+    } catch (error) {
+      console.error("Error deleting record:", error);
+      alert("Failed to delete record. Please try again.");
+    }
+  };
+
+  const getTreeData = () => {
+    const today = format(new Date(), "MM-dd-yyyy");
+    const todayStudents = students.filter((s) => s.date === today);
+
+    if (todayStudents.length === 0) {
+      return {
+        name: "No records today",
+        children: [],
+      };
+    }
+
+    const sections = {};
+    todayStudents.forEach((student) => {
+      if (!sections[student.section]) {
+        sections[student.section] = [];
+      }
+      sections[student.section].push({
+        name: student.name,
+        attributes: {
+          number: student.student_number,
+          in: student.in || "-",
+          out: student.out || "-",
+        },
+      });
+    });
+
+    return {
+      name: "Today's Attendance",
+      children: Object.keys(sections).map((sectionName) => ({
+        name: sectionName,
+        children: sections[sectionName],
+      })),
+    };
+  };
+
+  const treeData = getTreeData();
+
+  useEffect(() => {
+    if (isAuthenticated && activeTab === "dashboard") {
+      fetchStudents(); // Ensure we have data for the dashboard tree
+    }
+  }, [isAuthenticated, activeTab]);
 
   useEffect(() => {
     if (isAuthenticated && activeTab === "students") {
@@ -276,7 +402,58 @@ export default function Admin() {
 
             {activeTab === "dashboard" && (
               <>
-                {/* Stats Grid */}
+                {/* Attendance Tree Visualization */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                    Today's Attendance Hierarchy
+                  </h2>
+                  <div className="h-[500px] w-full border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900/50">
+                    <Tree
+                      data={treeData}
+                      orientation="vertical"
+                      pathFunc="step"
+                      translate={{ x: 250, y: 50 }}
+                      collapsible={true}
+                      rootNodeClassName="node__root"
+                      branchNodeClassName="node__branch"
+                      leafNodeClassName="node__leaf"
+                      renderCustomNodeElement={(rd3tProps) => (
+                        <g>
+                          <circle
+                            r="15"
+                            fill={
+                              rd3tProps.nodeDatum.children
+                                ? "#10b981"
+                                : "#3b82f6"
+                            }
+                            stroke="#fff"
+                            strokeWidth="2"
+                          />
+                          <text
+                            fill={theme === "dark" ? "#f1f5f9" : "#1e293b"}
+                            strokeWidth="0.5"
+                            x="20"
+                            y="5"
+                            className="text-xs font-semibold">
+                            {rd3tProps.nodeDatum.name}
+                          </text>
+                          {rd3tProps.nodeDatum.attributes && (
+                            <text
+                              fill="#94a3b8"
+                              x="20"
+                              y="20"
+                              className="text-[10px]">
+                              {rd3tProps.nodeDatum.attributes.in} -{" "}
+                              {rd3tProps.nodeDatum.attributes.out}
+                            </text>
+                          )}
+                        </g>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Stat Grid - keeping it below the tree for prominence or side by side if needed */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                   <StatCard
                     title="Total Students"
@@ -303,15 +480,7 @@ export default function Admin() {
                   />
                 </div>
 
-                {/* Placeholder Content */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                    Recent Activity Logs
-                  </h2>
-                  <div className="h-64 flex items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-                    <p>Data visualization or table will go here</p>
-                  </div>
-                </div>
+                {/* Placeholder Content removed - replaced by tree */}
               </>
             )}
 
@@ -321,11 +490,19 @@ export default function Admin() {
                   <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                     Attendance Records
                   </h2>
-                  <button
-                    onClick={fetchStudents}
-                    className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
-                    <Users className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={handleDownloadExcel}
+                      className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all active:scale-[0.98]">
+                      <Users className="w-4 h-4 mr-2" />
+                      Export Excel
+                    </button>
+                    <button
+                      onClick={() => fetchStudents(searchQuery)}
+                      className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+                      <Users className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {isLoading ? (
@@ -351,6 +528,9 @@ export default function Admin() {
                           </th>
                           <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                             Time Out
+                          </th>
+                          <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Actions
                           </th>
                         </tr>
                       </thead>
@@ -403,6 +583,14 @@ export default function Admin() {
                                 ) : (
                                   <span className="text-slate-400">-</span>
                                 )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={() => handleDelete(student.id)}
+                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
+                                  title="Delete Record">
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
                               </td>
                             </tr>
                           ))
